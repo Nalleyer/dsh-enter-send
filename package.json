@@ -58,6 +58,10 @@
     "composer",
     "settings"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nalleyer/dsh-enter-send.git"
+  },
   "author": "nalleyer@gmail.com",
   "license": "MIT"
 }

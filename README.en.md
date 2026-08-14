@@ -22,7 +22,7 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 ### Option 1: Install from GitHub (source, auto-built on install)
 
 ```powershell
-dsh plugin --profile web add github:<your-username>/dsh-enter-send
+dsh plugin --profile web add github:Nalleyer/dsh-enter-send
 ```
 
 A git install pulls **source**, not build artifacts, so pnpm ≥ 10 refuses to run the `prepare` build script until explicitly allowed — the first `add` fails and dsh prints the fix: copy the exact package key pnpm printed into that profile's `pnpm-workspace.yaml`:
@@ -32,7 +32,7 @@ allowBuilds:
   dsh-enter-send: true
 ```
 
-Then re-run `add`. **Be aware**: this authorization lets the package's code execute on your machine at install time (outside any sandbox). Only authorize packages whose source you trust, and consider pinning a commit (`github:<your-username>/dsh-enter-send#<sha>`).
+Then re-run `add`. **Be aware**: this authorization lets the package's code execute on your machine at install time (outside any sandbox). Only authorize packages whose source you trust, and consider pinning a commit (`github:Nalleyer/dsh-enter-send#<sha>`).
 
 The package declares the `dsh.bundle` manifest, so `add` automatically writes the load row into the profile's patch layer — no manual editing; just restart `dsh web`.
 

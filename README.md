@@ -24,7 +24,7 @@ DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新�
 ### 方式一：从 GitHub 安装（源码，安装时自动构建）
 
 ```powershell
-dsh plugin --profile web add github:<你的用户名>/dsh-enter-send
+dsh plugin --profile web add github:Nalleyer/dsh-enter-send
 ```
 
 git 安装拉取的是**源码**，不会附带构建产物，因此 pnpm ≥ 10 在得到显式允许前会拒绝运行 `prepare` 构建脚本——首次 `add` 会失败，dsh 会打印修法：把 pnpm 提示的确切包键写进该 profile 的 `pnpm-workspace.yaml`：
@@ -34,7 +34,7 @@ allowBuilds:
   dsh-enter-send: true
 ```
 
-然后重新执行 `add`。**请注意**：该授权允许包代码在安装时于你的机器上执行（不在任何沙箱内），只对源码可信的包授权，并建议锁定 commit（`github:<你的用户名>/dsh-enter-send#<sha>`）。
+然后重新执行 `add`。**请注意**：该授权允许包代码在安装时于你的机器上执行（不在任何沙箱内），只对源码可信的包授权，并建议锁定 commit（`github:Nalleyer/dsh-enter-send#<sha>`）。
 
 本包声明了 `dsh.bundle` 清单，`add` 后加载行会自动写入 profile 的 patch 层，无需手动编辑；重启 `dsh web` 即可生效。
 
