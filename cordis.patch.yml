@@ -1,11 +1,11 @@
-# dsh-enter-send local-development overlay.
+# dsh-enter-send 配置层。
 #
-# Requires the package to resolve as 'dsh-enter-send' from the booted
-# profile's node_modules chain (see README: `dsh plugin --profile web add
-# <this dir>` or a manual node_modules link), otherwise the loader fails to
-# import the entry. Apply with:
-#
-#   dsh web --port <port> --patch ./cordis.patch.yml
+# 双重用途：
+# 1. bundle patch —— 由 package.json 的 `dsh.bundle.patch` 声明，`dsh plugin
+#    --profile <name> add dsh-enter-send` 安装后自动应用本层，插入加载行
+#    （与官方 dsh-web-app 组合包同构）。
+# 2. 本地开发 overlay —— 未安装时可用 `dsh web --patch ./cordis.patch.yml`
+#    临时加载（需包名能从启动 profile 的模块链解析）。
 - insert:
     - id: enter-send
       name: 'dsh-enter-send'

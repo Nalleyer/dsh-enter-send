@@ -25,6 +25,15 @@ const PACKAGE_NAME = "dsh-enter-send";
 const EXTERNALS = ["--external", "react", "--external", "react/jsx-runtime", "--external", "@deepseek-ai/*"];
 
 function bun(args) {
+  try {
+    execFileSync("bun", ["--version"], { stdio: "ignore" });
+  } catch {
+    console.error(
+      "build requires bun (https://bun.sh) on PATH — dsh's bundle tool. " +
+        "Install it and re-run `npm run build`.",
+    );
+    process.exit(1);
+  }
   execFileSync("bun", args, { cwd: root, stdio: "inherit" });
 }
 

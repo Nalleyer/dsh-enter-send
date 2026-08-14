@@ -17,35 +17,51 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 ### Prerequisites
 
 - dsh ≥ `0.1.0-rc.6` (web platform)
-- [bun](https://bun.sh) to build
+- Installing from git runs the `prepare` script to build the package, which requires [bun](https://bun.sh)
 
-### Steps
+### Option 1: Install from GitHub (source, auto-built on install)
 
-1. Build the artifacts (or grab them from Releases):
+```powershell
+dsh plugin --profile web add github:<your-username>/dsh-enter-send
+```
 
-   ```powershell
-   npm run build   # or: node scripts/build.mjs
-   ```
+A git install pulls **source**, not build artifacts, so pnpm ≥ 10 refuses to run the `prepare` build script until explicitly allowed — the first `add` fails and dsh prints the fix: copy the exact package key pnpm printed into that profile's `pnpm-workspace.yaml`:
 
-2. Make the package resolvable by dsh (pick one):
+```yaml
+allowBuilds:
+  dsh-enter-send: true
+```
 
-   ```powershell
-   # Option A: register via the plugin command
-   dsh plugin --profile web add <this-dir>
+Then re-run `add`. **Be aware**: this authorization lets the package's code execute on your machine at install time (outside any sandbox). Only authorize packages whose source you trust, and consider pinning a commit (`github:<your-username>/dsh-enter-send#<sha>`).
 
-   # Option B: symlink into the profile's node_modules
-   #   $DSH_HOME\profiles\node_modules\dsh-enter-send → <this-dir>
-   ```
+The package declares the `dsh.bundle` manifest, so `add` automatically writes the load row into the profile's patch layer — no manual editing; just restart `dsh web`.
 
-3. Enable the load entry in the profile's `cordis.patch.yml` (required for Option B; Option A writes it for you):
+### Option 2: Install from tarball / npm (prebuilt, no build authorization)
 
-   ```yaml
-   - insert:
-       - id: enter-send
-         name: 'dsh-enter-send'
-   ```
+```powershell
+# tarball (produced via pnpm pack in this repo)
+dsh plugin --profile web add ./dsh-enter-send-0.1.0.tgz
 
-4. Restart `dsh web`, then open **Settings → General** to see "Send shortcut".
+# or by package name once published to npm
+dsh plugin --profile web add dsh-enter-send
+```
+
+### Local development (--patch overlay, does not touch the profile)
+
+```powershell
+# Note: --patch must come before unknown options forwarded to the web app
+# (e.g. --port): commander treats an unknown option and its following tokens
+# as positional args, so --patch after --port errors with unknown option;
+# the parent form (dsh --patch ... web) is rejected as well.
+dsh web --patch ./cordis.patch.yml --port 8091
+```
+
+### Uninstall
+
+```powershell
+dsh plugin --profile web remove dsh-enter-send   # removes the dependency and its layer
+# Any leftover enter-send section in $DSH_HOME/settings.yaml is harmless; remove it manually if you like
+```
 
 > See the [dsh documentation](https://deepseek-harness.github.io/deepseek-harness/develop/basic/) for the official plugin packaging & installation guide.
 
@@ -66,8 +82,8 @@ bun test                 # keymap unit tests + bundle-shape smoke test
 ## Directory Layout
 
 ```
-├── package.json          # dsh.client manifest (platform: web)
-├── cordis.patch.yml      # local-development load patch
+├── package.json          # dsh.bundle + dsh.client manifest (platform: web)
+├── cordis.patch.yml      # bundle layer (dsh.bundle.patch); doubles as the dev --patch overlay
 ├── scripts/build.mjs     # build script (bun build + __ModuleLoader__.load wrapper)
 ├── src/
 │   ├── types.ts          # mode types & settings constants (shared by both halves)

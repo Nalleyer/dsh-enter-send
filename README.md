@@ -19,35 +19,50 @@ DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新�
 ### 前置条件
 
 - dsh ≥ `0.1.0-rc.6`（web 平台）
-- 构建需要 [bun](https://bun.sh)
+- 从 git 安装时，安装过程会运行 `prepare` 脚本自动构建，需要 [bun](https://bun.sh)
 
-### 步骤
+### 方式一：从 GitHub 安装（源码，安装时自动构建）
 
-1. 构建产物（或在 Releases 下载）：
+```powershell
+dsh plugin --profile web add github:<你的用户名>/dsh-enter-send
+```
 
-   ```powershell
-   npm run build   # 或 node scripts/build.mjs
-   ```
+git 安装拉取的是**源码**，不会附带构建产物，因此 pnpm ≥ 10 在得到显式允许前会拒绝运行 `prepare` 构建脚本——首次 `add` 会失败，dsh 会打印修法：把 pnpm 提示的确切包键写进该 profile 的 `pnpm-workspace.yaml`：
 
-2. 让 dsh 能解析到本包（二选一）：
+```yaml
+allowBuilds:
+  dsh-enter-send: true
+```
 
-   ```powershell
-   # 方式 A：通过插件命令注册
-   dsh plugin --profile web add <本目录>
+然后重新执行 `add`。**请注意**：该授权允许包代码在安装时于你的机器上执行（不在任何沙箱内），只对源码可信的包授权，并建议锁定 commit（`github:<你的用户名>/dsh-enter-send#<sha>`）。
 
-   # 方式 B：手动链接到 profile 的 node_modules
-   #   $DSH_HOME\profiles\node_modules\dsh-enter-send → <本目录>
-   ```
+本包声明了 `dsh.bundle` 清单，`add` 后加载行会自动写入 profile 的 patch 层，无需手动编辑；重启 `dsh web` 即可生效。
 
-3. 在 profile 的 `cordis.patch.yml` 中启用加载行（方式 B 需要；方式 A 会自动写入）：
+### 方式二：tarball / npm 安装（预构建产物，无需构建授权）
 
-   ```yaml
-   - insert:
-       - id: enter-send
-         name: 'dsh-enter-send'
-   ```
+```powershell
+# tarball（仓库内 pnpm pack 产出）
+dsh plugin --profile web add ./dsh-enter-send-0.1.0.tgz
 
-4. 重启 `dsh web`，打开 **设置 → 常规** 即可看到"发送快捷键"。
+# 或 npm 发布后按包名安装
+dsh plugin --profile web add dsh-enter-send
+```
+
+### 本地开发（--patch overlay，不写入 profile）
+
+```powershell
+# 注意：--patch 必须放在转发给 web app 的未知选项（如 --port）之前：
+# commander 遇到未知选项就将其及后续 token 当作位置参数，--patch 放后面
+# 会报 unknown option；也不能写成父级形式（dsh --patch ... web）。
+dsh web --patch ./cordis.patch.yml --port 8091
+```
+
+### 卸载
+
+```powershell
+dsh plugin --profile web remove dsh-enter-send   # 移除依赖与加载层
+# 卸载后 $DSH_HOME/settings.yaml 中残留的 enter-send 段无害，可手动删除
+```
 
 > 插件打包与安装的官方说明见 [dsh 开发文档](https://deepseek-harness.github.io/deepseek-harness/develop/basic/)。
 
@@ -68,8 +83,8 @@ bun test                 # keymap 逻辑单测 + bundle 形态冒烟测试
 ## 目录结构
 
 ```
-├── package.json          # dsh.client 清单（platform: web）
-├── cordis.patch.yml      # 本地开发加载用的 patch
+├── package.json          # dsh.bundle + dsh.client 清单（platform: web）
+├── cordis.patch.yml      # bundle 配置层（dsh.bundle.patch），兼本地开发 --patch
 ├── scripts/build.mjs     # 构建脚本（bun build + __ModuleLoader__.load 包装）
 ├── src/
 │   ├── types.ts          # 模式类型与 settings 常量（双端共用）
