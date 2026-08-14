@@ -19,7 +19,8 @@ DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新�
 ### 前置条件
 
 - dsh ≥ `0.1.0-rc.6`（web 平台）
-- 从 git 安装时，安装过程会运行 `prepare` 脚本自动构建，需要 [bun](https://bun.sh)
+- 从 git 安装时，安装过程会运行 `prepare` 脚本自动构建：构建工具链为 esbuild（npm 生态，仅需 Node.js，随 devDependencies 自动安装）；本机装有 bun 时自动改用 bun 构建
+- 运行测试需要 [bun](https://bun.sh)（仅开发用）
 
 ### 方式一：从 GitHub 安装（源码，安装时自动构建）
 
@@ -70,7 +71,8 @@ dsh plugin --profile web remove dsh-enter-send   # 移除依赖与加载层
 
 ```powershell
 node scripts/build.mjs   # 产出 lib/index.js（host 半）+ lib/client.js（浏览器半）
-bun test                 # keymap 逻辑单测 + bundle 形态冒烟测试
+                         # 构建优先用 esbuild（npm），无 esbuild 时回退 bun
+bun test                 # keymap 逻辑单测 + bundle 形态冒烟测试（需要 bun）
 ```
 
 ## 工作原理

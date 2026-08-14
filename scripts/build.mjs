@@ -9,8 +9,10 @@
  *                       dsh-client-ui-conversation/lib/client.js).
  *   lib/types/*.d.ts  — minimal public type declarations.
  *
- * Requires `bun` on PATH (the workspace's own bundle tool; npm has a broken
- * native-module setup on this machine, see the handover doc §1).
+ * Toolchain: esbuild (npm) first — Node-only, matches the official dsh
+ * quickstart (`npx @deepseek-ai/dsh`), and is what `prepare` uses during a
+ * `dsh plugin add github:...` install (pnpm installs devDependencies there).
+ * Falls back to bun for local setups that ship dsh via bun.
  */
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
@@ -22,43 +24,104 @@ const lib = join(root, "lib");
 const PACKAGE_NAME = "dsh-enter-send";
 
 /** All runtime imports outside the bundle resolve from the client module table. */
-const EXTERNALS = ["--external", "react", "--external", "react/jsx-runtime", "--external", "@deepseek-ai/*"];
+const EXTERNALS = ["react", "react/jsx-runtime", "@deepseek-ai/*"];
 
-function bun(args) {
-  try {
-    execFileSync("bun", ["--version"], { stdio: "ignore" });
-  } catch {
-    console.error(
-      "build requires bun (https://bun.sh) on PATH — dsh's bundle tool. " +
-        "Install it and re-run `npm run build`.",
-    );
-    process.exit(1);
-  }
-  execFileSync("bun", args, { cwd: root, stdio: "inherit" });
+/** esbuild path (npm ecosystem; the primary toolchain). */
+async function bundleWithEsbuild(esbuild) {
+  const client = await esbuild.build({
+    entryPoints: [join(root, "src/client/index.ts")],
+    outfile: join(lib, ".client.tmp.js"),
+    bundle: true,
+    format: "cjs",
+    platform: "browser",
+    target: ["es2022"],
+    jsx: "automatic",
+    jsxImportSource: "react",
+    external: EXTERNALS,
+    write: false,
+  });
+  writeFileSync(join(lib, ".client.tmp.js"), client.outputFiles[0].text);
+
+  const host = await esbuild.build({
+    entryPoints: [join(root, "src/node/index.ts")],
+    outfile: join(lib, "index.js"),
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    target: ["es2022"],
+    external: EXTERNALS,
+    write: false,
+  });
+  writeFileSync(join(lib, "index.js"), host.outputFiles[0].text);
+}
+
+/** bun fallback (bun-installed dsh setups; also the historical local toolchain). */
+function bundleWithBun() {
+  execFileSync(
+    "bun",
+    [
+      "build",
+      "src/client/index.ts",
+      "--outfile",
+      join(lib, ".client.tmp.js"),
+      "--format",
+      "cjs",
+      "--target",
+      "browser",
+      // Production: selects react/jsx-runtime over react/jsx-dev-runtime — the
+      // shell's static module table seeds jsx-runtime only (verified in
+      // dsh-web-frontend dist), so a dev-runtime require would fail at load.
+      "--production",
+      ...EXTERNALS.flatMap((spec) => ["--external", spec]),
+    ],
+    { cwd: root, stdio: "inherit" },
+  );
+  execFileSync(
+    "bun",
+    [
+      "build",
+      "src/node/index.ts",
+      "--outfile",
+      join(lib, "index.js"),
+      "--format",
+      "esm",
+      "--target",
+      "node",
+      "--external",
+      "@deepseek-ai/*",
+    ],
+    { cwd: root, stdio: "inherit" },
+  );
 }
 
 mkdirSync(lib, { recursive: true });
 mkdirSync(join(lib, "types", "client"), { recursive: true });
 
-// ── browser half: bundle, then wrap in the module-loader handoff ───────────
-const tmpClient = join(lib, ".client.tmp.js");
-bun([
-  "build",
-  "src/client/index.ts",
-  "--outfile",
-  tmpClient,
-  "--format",
-  "cjs",
-  "--target",
-  "browser",
-  // Production: selects react/jsx-runtime over react/jsx-dev-runtime — the
-  // shell's static module table seeds jsx-runtime only (verified in
-  // dsh-web-frontend dist), so a dev-runtime require would fail at load.
-  "--production",
-  ...EXTERNALS,
-]);
-const body = readFileSync(tmpClient, "utf8");
-rmSync(tmpClient);
+let esbuild = null;
+try {
+  esbuild = await import("esbuild");
+} catch {
+  // devDependencies not installed yet — fall back to bun below.
+}
+if (esbuild) {
+  await bundleWithEsbuild(esbuild);
+  console.log(`bundled with esbuild (npm)`);
+} else {
+  try {
+    bundleWithBun();
+    console.log(`bundled with bun (fallback)`);
+  } catch (error) {
+    console.error(
+      "build failed: install devDependencies (`npm install` or `bun install`) " +
+        "for esbuild, or put bun (https://bun.sh) on PATH.",
+    );
+    process.exit(1);
+  }
+}
+
+// ── wrap the browser bundle in the module-loader handoff ────────────────────
+const body = readFileSync(join(lib, ".client.tmp.js"), "utf8");
+rmSync(join(lib, ".client.tmp.js"));
 const clientBundle = `window.__ModuleLoader__.load({
   id: ${JSON.stringify(PACKAGE_NAME)},
   factory: (require) => {
@@ -72,20 +135,6 @@ ${body}
 `;
 writeFileSync(join(lib, "client.js"), clientBundle);
 
-// ── host half: plain ESM plugin module ─────────────────────────────────────
-bun([
-  "build",
-  "src/node/index.ts",
-  "--outfile",
-  join(lib, "index.js"),
-  "--format",
-  "esm",
-  "--target",
-  "node",
-  "--external",
-  "@deepseek-ai/*",
-]);
-
 // ── minimal public types ───────────────────────────────────────────────────
 writeFileSync(
   join(lib, "types", "index.d.ts"),
@@ -94,7 +143,7 @@ export declare const MODE_FIELD = "mode";
 export declare const MODES: readonly ["enter", "ctrl-enter"];
 export declare type SendMode = (typeof MODES)[number];
 export declare const DEFAULT_MODE: SendMode;
-export interface EnterSendSettings {
+export declare interface EnterSendSettings {
   mode?: SendMode;
 }
 export declare function apply(ctx: unknown): void;

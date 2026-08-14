@@ -40,6 +40,9 @@
     "prepare": "node scripts/build.mjs",
     "test": "bun test"
   },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
   "peerDependencies": {
     "react": "^18.2.0",
     "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.6",

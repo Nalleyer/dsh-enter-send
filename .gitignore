@@ -4,3 +4,7 @@ node_modules/
 
 # Build artifacts; regenerate with `node scripts/build.mjs`.
 lib/
+
+# Throwaway scratch dirs (upstream clones, npm/pnpm sandboxes).
+.tmp-*/
+.upstream-*/

@@ -17,7 +17,8 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 ### Prerequisites
 
 - dsh ≥ `0.1.0-rc.6` (web platform)
-- Installing from git runs the `prepare` script to build the package, which requires [bun](https://bun.sh)
+- Installing from git runs the `prepare` script to build the package: the toolchain is esbuild (npm ecosystem — Node.js only; installed automatically as a devDependency); setups with bun installed fall back to bun automatically
+- Running the tests requires [bun](https://bun.sh) (development only)
 
 ### Option 1: Install from GitHub (source, auto-built on install)
 
@@ -69,7 +70,8 @@ dsh plugin --profile web remove dsh-enter-send   # removes the dependency and it
 
 ```powershell
 node scripts/build.mjs   # produces lib/index.js (host half) + lib/client.js (browser half)
-bun test                 # keymap unit tests + bundle-shape smoke test
+                         # esbuild (npm) first; falls back to bun when esbuild is absent
+bun test                 # keymap unit tests + bundle-shape smoke test (requires bun)
 ```
 
 ## How It Works
