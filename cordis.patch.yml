@@ -1,0 +1,11 @@
+# dsh-enter-send local-development overlay.
+#
+# Requires the package to resolve as 'dsh-enter-send' from the booted
+# profile's node_modules chain (see README: `dsh plugin --profile web add
+# <this dir>` or a manual node_modules link), otherwise the loader fails to
+# import the entry. Apply with:
+#
+#   dsh web --port <port> --patch ./cordis.patch.yml
+- insert:
+    - id: enter-send
+      name: 'dsh-enter-send'

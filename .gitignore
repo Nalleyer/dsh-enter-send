@@ -1,0 +1,6 @@
+# node_modules is a junction to the global bun installation on this machine;
+# never track it (rebuild with `node scripts/build.mjs`).
+node_modules/
+
+# Build artifacts; regenerate with `node scripts/build.mjs`.
+lib/
