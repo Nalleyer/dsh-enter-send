@@ -5,6 +5,9 @@
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
+  "files": [
+    "lib"
+  ],
   "exports": {
     ".": {
       "types": "./lib/types/index.d.ts",
@@ -41,5 +44,14 @@
     "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "keymap",
+    "composer",
+    "settings"
+  ],
+  "author": "nalleyer@gmail.com",
   "license": "MIT"
 }

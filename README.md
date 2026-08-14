@@ -1,5 +1,7 @@
 # dsh-enter-send
 
+[English](./README.en.md) | [简体中文](./README.md)
+
 DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新增"发送快捷键"选项，重映射聊天输入框的发送 / 换行键位。
 
 | 选项 | Enter | Ctrl/Cmd+Enter |
