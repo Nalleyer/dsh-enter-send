@@ -17,7 +17,7 @@ import { installKeymap } from "./keymap.js";
 import { injectStyles } from "./styles.js";
 
 /** Services required by this browser plugin (fiber activation gates on them). */
-export const inject = ["slots", "locale", "settingsScope"];
+export const inject = ["slots", "locale", "connection", "remote", "settingsScope"];
 
 /** Adopt the scope's accepted durable mode without writing it back. */
 function adoptMode(
@@ -34,7 +34,9 @@ function adoptMode(
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), "enter-send: dictionaries");
 
-  const modeStore = createSnapshotStore<SendMode>(DEFAULT_MODE);
+  const modeStore = createSnapshotStore<SendMode>(DEFAULT_MODE, {
+    persist: { name: "dsh-enter-send.mode" },
+  });
   const host = ctx.settingsScope.bind<EnterSendSettings>({ namespace: SETTINGS_NAMESPACE });
   host.subscribe(() => adoptMode(host, modeStore));
   adoptMode(host, modeStore);

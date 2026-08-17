@@ -12,7 +12,7 @@ DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新�
 - Shift+Enter 两种模式下都是换行（浏览器默认行为，不拦截）。
 - 中文输入法（IME）组合输入中的 Enter 一律放行，不会误发。
 - 默认值 `enter` 下普通 Enter 行为与官方完全一致，升级无感知。
-- 设置持久化到 `$DSH_HOME/settings.yaml`（namespace `enter-send.mode`）。
+- 设置持久化到 `$DSH_HOME/settings.yaml`（namespace `enter-send.mode`）；同时写入浏览器 `localStorage` 作为非本机访问/内存模式下的兜底，重启 Web 后仍会恢复上次选择。
 
 ## 安装
 
@@ -80,7 +80,7 @@ bun test                 # keymap 逻辑单测 + bundle 形态冒烟测试（需
 - **拦截层**：`document` 捕获阶段 keydown 监听（`addEventListener(..., true)`），先于 React 委托的 composer `onKeyDown`。命中条件：目标是 composer 的 textarea（带独有 `data-phase` 标记、非 readOnly/disabled、非 IME 组合 `isComposing || keyCode === 229`）。
 - **发送**：拦截后向 textarea 派发合成的无修饰 Enter `keydown`（`bubbles: true`），冒泡到 React root 触发 composer 原生提交路径——草稿 / 附件 / 队列 / busy 仲裁全部复用，不重复实现。合成事件会再次经过捕获阶段，由同步标志防重入。
 - **换行**：`document.execCommand("insertText", "\n")`，触发原生 `input` 事件，草稿同步与 Shift+Enter 路径一致。
-- **持久化**：浏览器半通过 `settingsScope` 绑定 `enter-send` namespace，host 半注册 schemastery schema（`mode: "enter" | "ctrl-enter"`），读写 `$DSH_HOME/settings.yaml`。
+- **持久化**：浏览器半通过 `settingsScope` 绑定 `enter-send` namespace，host 半注册 schemastery schema（`mode: "enter" | "ctrl-enter"`），读写 `$DSH_HOME/settings.yaml`；选择同时存入浏览器 `localStorage`，在非 loopback/内存模式下也能跨重启保留。
 
 ## 目录结构
 

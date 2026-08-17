@@ -10,7 +10,7 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 - Shift+Enter always inserts a newline in both modes (browser default, not intercepted).
 - Enter pressed during IME composition always passes through — no accidental sends.
 - With the default `enter` mode, plain Enter behaves exactly like stock dsh, so upgrading is a no-op.
-- The setting persists to `$DSH_HOME/settings.yaml` (namespace `enter-send.mode`).
+- The setting persists to `$DSH_HOME/settings.yaml` (namespace `enter-send.mode`); it is also mirrored to browser `localStorage` as a fallback for non-loopback/memory-mode pages, so the last choice survives Web restarts.
 
 ## Installation
 
@@ -79,7 +79,7 @@ bun test                 # keymap unit tests + bundle-shape smoke test (requires
 - **Interception**: a capture-phase `keydown` listener on `document` (`addEventListener(..., true)`) runs before React's delegated composer `onKeyDown`. It only fires when the target is the composer's textarea (carrying its `data-phase` marker, not readOnly/disabled, and not composing — `isComposing || keyCode === 229`).
 - **Sending**: the keymap dispatches a synthesized unmodified-Enter `keydown` (`bubbles: true`) that bubbles to the React root and triggers the composer's native submit path — draft / attachments / queue / busy arbitration are all reused, never re-implemented. The synthetic event re-enters the capture phase; a synchronous flag prevents recursion.
 - **Newline**: `document.execCommand("insertText", "\n")` fires the native `input` event, so draft sync follows the exact same path as Shift+Enter.
-- **Persistence**: the browser half binds the `enter-send` namespace via `settingsScope`; the host half registers a schemastery schema (`mode: "enter" | "ctrl-enter"`) writing to `$DSH_HOME/settings.yaml`.
+- **Persistence**: the browser half binds the `enter-send` namespace via `settingsScope`; the host half registers a schemastery schema (`mode: "enter" | "ctrl-enter"`) writing to `$DSH_HOME/settings.yaml`. The choice is also mirrored to browser `localStorage`, so it can survive restarts even in non-loopback/memory-mode pages.
 
 ## Directory Layout
 

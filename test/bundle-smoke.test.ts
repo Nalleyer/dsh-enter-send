@@ -46,6 +46,6 @@ test("client bundle registers the loader handoff and materializes", () => {
     throw new Error(`unexpected require("${spec}")`);
   });
   assert.deepEqual(Object.keys(materialized).sort(), ["apply", "inject"]);
-  assert.deepEqual(materialized.inject, ["slots", "locale", "settingsScope"]);
+  assert.deepEqual(materialized.inject, ["slots", "locale", "connection", "remote", "settingsScope"]);
   assert.equal(typeof materialized.apply, "function");
 });
