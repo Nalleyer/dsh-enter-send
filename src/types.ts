@@ -6,7 +6,7 @@
  * vocabulary so the wire section stays consistent.
  */
 
-/** Settings namespace (lowercase kebab-case, enforced by `settingsNamespace`). */
+/** Settings namespace (lowercase kebab-case, validated by the settings service). */
 export const SETTINGS_NAMESPACE = "enter-send";
 
 /** Field carrying the send shortcut mode inside the namespace section. */

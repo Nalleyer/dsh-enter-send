@@ -7,7 +7,6 @@
  * bundle (./client); this side is the settings-surface counterpart, mirroring
  * the official `dsh-client-ui-conversation` host registration.
  */
-import { settingsNamespace } from "@deepseek-ai/dsh-settings";
 import z from "@deepseek-ai/schemastery";
 import { DEFAULT_MODE, MODE_FIELD, MODES, SETTINGS_NAMESPACE } from "../types.js";
 
@@ -19,7 +18,7 @@ const EnterSendSettingsSchema = z.object({
 /** Register the durable enter-send section when a settings provider exists. */
 function apply(ctx: any): void {
   ctx.inject(["settings"], (settingsCtx: any) => {
-    settingsCtx.settings.register(settingsNamespace(SETTINGS_NAMESPACE), EnterSendSettingsSchema);
+    settingsCtx.settings.register(SETTINGS_NAMESPACE, EnterSendSettingsSchema);
   });
 }
 
