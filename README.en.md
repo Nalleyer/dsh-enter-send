@@ -16,7 +16,7 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 
 ### Prerequisites
 
-- dsh ≥ `0.1.2-rc.1` (web platform)
+- dsh `0.1.2-rc.1` (web platform): currently tested version; it is also the declared minimum, while newer versions require a compatibility check
 - Installing from git runs the `prepare` script to build the package: the toolchain is esbuild (npm ecosystem — Node.js only; installed automatically as a devDependency); setups with bun installed fall back to bun automatically
 - Running the tests requires [bun](https://bun.sh) (development only)
 

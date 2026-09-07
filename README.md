@@ -18,7 +18,7 @@ DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新�
 
 ### 前置条件
 
-- dsh ≥ `0.1.2-rc.1`（web 平台）
+- dsh `0.1.2-rc.1`（web 平台）：当前已验证版本；插件声明的最低版本也是 `0.1.2-rc.1`，更高版本需重新确认兼容性
 - 从 git 安装时，安装过程会运行 `prepare` 脚本自动构建：构建工具链为 esbuild（npm 生态，仅需 Node.js，随 devDependencies 自动安装）；本机装有 bun 时自动改用 bun 构建
 - 运行测试需要 [bun](https://bun.sh)（仅开发用）
 
