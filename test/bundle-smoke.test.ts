@@ -29,7 +29,7 @@ test("client bundle registers the loader handoff and materializes", () => {
   const table: Record<string, unknown> = {
     react: { useState: () => null },
     "react/jsx-runtime": { jsx: () => null, jsxs: () => null },
-    "@deepseek-ai/dsh-client-runtime/client": {
+    "@deepseek-ai/dsh-client-store": {
       createSnapshotStore: (init: unknown) => ({
         getSnapshot: () => init,
         set: () => {},

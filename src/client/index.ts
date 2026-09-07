@@ -7,8 +7,10 @@
  * locale dictionaries, the stylesheet, and the keydown listener are torn down
  * automatically when the plugin unloads.
  */
-import type { ClientContext, SettingsScope, SnapshotStore } from "@deepseek-ai/dsh-client-runtime/client";
-import { createSnapshotStore } from "@deepseek-ai/dsh-client-runtime/client";
+import type { Context as ClientContext } from "@deepseek-ai/cordis";
+import { createSnapshotStore } from "@deepseek-ai/dsh-client-store";
+import type { SnapshotStore } from "@deepseek-ai/dsh-client-store";
+import type { SettingsScope } from "@deepseek-ai/dsh-client-ui-settings/client";
 import { en, LOCALE_NS, zh } from "../locales.js";
 import { DEFAULT_MODE, MODE_FIELD, SETTINGS_NAMESPACE } from "../types.js";
 import type { EnterSendSettings, SendMode } from "../types.js";
