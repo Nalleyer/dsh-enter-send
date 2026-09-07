@@ -76,8 +76,8 @@ bun test                 # keymap unit tests + bundle-shape smoke test (requires
 
 ## How It Works
 
-- **Interception**: a capture-phase `keydown` listener on `document` (`addEventListener(..., true)`) runs before React's delegated composer `onKeyDown`. It only fires when the target is the composer's textarea (carrying its `data-phase` marker, not readOnly/disabled, and not composing — `isComposing || keyCode === 229`).
-- **Sending**: the keymap dispatches a synthesized unmodified-Enter `keydown` (`bubbles: true`) that bubbles to the React root and triggers the composer's native submit path — draft / attachments / queue / busy arbitration are all reused, never re-implemented. The synthetic event re-enters the capture phase; a synchronous flag prevents recursion.
+- **Interception**: a capture-phase `keydown` listener on `document` (`addEventListener(..., true)`) runs before React's delegated composer `onKeyDown`. It recognizes the composer's editable surface (both the legacy textarea and the current Lexical editor with `data-composer-input`, `data-phase`, and `contenteditable="true"`), while excluding disabled and composing input (`isComposing || keyCode === 229`).
+- **Sending**: the keymap dispatches a synthesized unmodified-Enter `keydown` (`bubbles: true`) on the composer editor, which bubbles to the React root and triggers the composer's native submit path — draft / attachments / queue / busy arbitration are all reused, never re-implemented. The synthetic event re-enters the capture phase; a synchronous flag prevents recursion.
 - **Newline**: `document.execCommand("insertText", "\n")` fires the native `input` event, so draft sync follows the exact same path as Shift+Enter.
 - **Persistence**: the browser half binds the `enter-send` namespace via `settingsScope`; the host half registers a schemastery schema (`mode: "enter" | "ctrl-enter"`) writing to `$DSH_HOME/settings.yaml`. The choice is also mirrored to browser `localStorage`, so it can survive restarts even in non-loopback/memory-mode pages.
 
@@ -103,7 +103,7 @@ bun test                 # keymap unit tests + bundle-shape smoke test (requires
 
 ## Compatibility Notes
 
-- The plugin identifies the composer textarea by its `data-phase` attribute, coupling it to the official composer's internals; if upstream changes that marker, update `isComposerTarget` accordingly.
+- The plugin identifies the current Lexical composer through `data-composer-input` + `data-phase` and keeps legacy textarea support; if upstream changes these markers, update `isComposerTarget` / `findComposerTarget` accordingly.
 - `document.execCommand("insertText")` is deprecated but supported in every Chromium release; if it is ever removed, switch to `beforeinput` / `InputEvent` injection (see the comments in `src/client/keymap.ts`).
 
 ## License

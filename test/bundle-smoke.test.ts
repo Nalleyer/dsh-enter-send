@@ -23,6 +23,7 @@ test("client bundle registers the loader handoff and materializes", () => {
   new Function("window", code)((globalThis as Record<string, unknown>).window);
   assert.ok(handoff, "bundle must call window.__ModuleLoader__.load");
   assert.equal(handoff!.id, "dsh-enter-send");
+  assert.match(code, /data-composer-input/, "bundle must recognize the current dsh composer");
 
   // The shell's static module table (verified in dsh-web-frontend dist) plus
   // graph rows must cover every require the bundle makes.

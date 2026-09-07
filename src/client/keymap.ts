@@ -1,5 +1,5 @@
 /**
- * Keymap core: remap Enter / Ctrl(+Cmd)+Enter on the composer textarea.
+ * Keymap core: remap Enter / Ctrl(+Cmd)+Enter on the composer editor.
  *
  * Strategy (see the handover doc §3.1/§3.2): a document-level CAPTURE-phase
  * keydown listener runs before React's delegated composer handler. When the
@@ -10,8 +10,8 @@
  *   React's root listener, so the composer's own submit path runs unchanged
  *   (draft, attachments, queue/busy arbitration — all native).
  * - "newline": `document.execCommand("insertText", "\n")` on the focused
- *   textarea, which fires the native input event and keeps React's draft
- *   store in sync exactly like the browser-default Shift+Enter path.
+ *   editable surface, which fires the native input event and keeps React's
+ *   draft store in sync exactly like the browser-default Shift+Enter path.
  *
  * IME composition (keyCode 229 / isComposing) always passes through, and
  * Shift+Enter always passes through (newline in both modes).
@@ -32,21 +32,46 @@ export interface KeyFacts {
 /**
  * Attribute-level composer check (instanceof kept separate so tests can
  * exercise the shape with plain stubs).
+ *
+ * dsh <= 0.1.1 used a textarea. Current dsh uses a Lexical contenteditable
+ * div with both data-composer-input and data-phase markers.
  */
 export function isComposerTargetLike(target: {
+  tagName: string;
   hasAttribute(name: string): boolean;
-  readOnly: boolean;
-  disabled: boolean;
+  getAttribute(name: string): string | null;
+  readOnly?: boolean;
+  disabled?: boolean;
 }): boolean {
-  return target.hasAttribute("data-phase") && !target.readOnly && !target.disabled;
+  const isTextarea = target.tagName.toLowerCase() === "textarea";
+  const isCurrentContentEditable =
+    target.hasAttribute("data-composer-input") && target.getAttribute("contenteditable") === "true";
+  return (
+    target.hasAttribute("data-phase") &&
+    (isTextarea || isCurrentContentEditable) &&
+    !target.readOnly &&
+    !target.disabled &&
+    target.getAttribute("aria-disabled") !== "true"
+  );
 }
 
 /**
- * True when `target` is the composer's editable textarea: a textarea carrying
- * the composer's `data-phase` marker and currently accepting input.
+ * True when `target` is the composer's editable surface: either the legacy
+ * textarea or the current Lexical contenteditable div.
  */
-export function isComposerTarget(target: unknown): target is HTMLTextAreaElement {
-  return target instanceof HTMLTextAreaElement && isComposerTargetLike(target);
+export function isComposerTarget(target: unknown): target is HTMLElement {
+  return target instanceof HTMLElement && isComposerTargetLike(target);
+}
+
+/**
+ * Resolve a key event target to the composer root. Key events from a
+ * contenteditable can originate on a decorated child, so use the nearest
+ * marked editor instead of requiring the event target itself to be the root.
+ */
+export function findComposerTarget(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) return null;
+  const candidate = target.closest("[data-composer-input][data-phase], textarea[data-phase]");
+  return isComposerTarget(candidate) ? candidate : null;
 }
 
 /**
@@ -79,7 +104,7 @@ export function decide(mode: SendMode, e: KeyFacts, eligible: boolean, composing
 }
 
 /** Insert a newline into the focused editable element (fires React onChange). */
-export function insertNewline(target: HTMLTextAreaElement): void {
+export function insertNewline(target: HTMLElement): void {
   target.focus();
   // Deprecated but universally supported in Chromium; fires the native
   // `input` event so React's draft store syncs exactly like Shift+Enter.
@@ -92,14 +117,14 @@ export function insertNewline(target: HTMLTextAreaElement): void {
  * matter to React; the composer treats it as an unmodified Enter and runs its
  * normal submit path (accelerated = false → plain submit).
  */
-export function sendViaComposer(target: HTMLTextAreaElement): void {
+export function sendViaComposer(target: HTMLElement): void {
   target.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
 }
 
 /** DOM-backed actions used by the installed listener. */
 export interface KeymapActions {
-  insertNewline(target: HTMLTextAreaElement): void;
-  sendViaComposer(target: HTMLTextAreaElement): void;
+  insertNewline(target: HTMLElement): void;
+  sendViaComposer(target: HTMLElement): void;
 }
 
 export const domActions: KeymapActions = {
@@ -112,12 +137,13 @@ export const domActions: KeymapActions = {
  * `actions` is injectable for tests.
  */
 export function handleKeydown(mode: SendMode, e: KeyboardEvent, actions: KeymapActions = domActions): boolean {
-  const action = decide(mode, e, isComposerTarget(e.target), e.isComposing || e.keyCode === 229);
-  if (action === null) return false;
+  const target = findComposerTarget(e.target);
+  const action = decide(mode, e, target !== null, e.isComposing || e.keyCode === 229);
+  if (action === null || target === null) return false;
   e.preventDefault();
   e.stopPropagation();
-  if (action === "send") actions.sendViaComposer(e.target as HTMLTextAreaElement);
-  else actions.insertNewline(e.target as HTMLTextAreaElement);
+  if (action === "send") actions.sendViaComposer(target);
+  else actions.insertNewline(target);
   return true;
 }
 

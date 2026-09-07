@@ -46,9 +46,38 @@ test("decide gates on composing input and target eligibility", () => {
 });
 
 test("composer-target shape check", () => {
-  const target = { hasAttribute: (name) => name === "data-phase", readOnly: false, disabled: false };
+  const target = {
+    tagName: "TEXTAREA",
+    hasAttribute: (name: string) => name === "data-phase",
+    getAttribute: () => null,
+    readOnly: false,
+    disabled: false,
+  };
   assert.equal(isComposerTargetLike(target), true);
   assert.equal(isComposerTargetLike({ ...target, readOnly: true }), false);
   assert.equal(isComposerTargetLike({ ...target, disabled: true }), false);
   assert.equal(isComposerTargetLike({ ...target, hasAttribute: () => false }), false);
+
+  const currentEditor = {
+    tagName: "DIV",
+    hasAttribute: (name: string) => name === "data-phase" || name === "data-composer-input",
+    getAttribute: (name: string) => (name === "contenteditable" ? "true" : null),
+    readOnly: false,
+    disabled: false,
+  };
+  assert.equal(isComposerTargetLike(currentEditor), true);
+  assert.equal(
+    isComposerTargetLike({
+      ...currentEditor,
+      getAttribute: (name: string) => (name === "contenteditable" ? "false" : null),
+    }),
+    false,
+  );
+  assert.equal(
+    isComposerTargetLike({
+      ...currentEditor,
+      getAttribute: (name: string) => (name === "aria-disabled" ? "true" : null),
+    }),
+    false,
+  );
 });
