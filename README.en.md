@@ -78,7 +78,7 @@ bun test                 # keymap unit tests + bundle-shape smoke test (requires
 
 - **Interception**: a capture-phase `keydown` listener on `document` (`addEventListener(..., true)`) runs before React's delegated composer `onKeyDown`. It recognizes the composer's editable surface (both the legacy textarea and the current Lexical editor with `data-composer-input`, `data-phase`, and `contenteditable="true"`), while excluding disabled and composing input (`isComposing || keyCode === 229`).
 - **Sending**: the keymap dispatches a synthesized unmodified-Enter `keydown` (`bubbles: true`) on the composer editor, which bubbles to the React root and triggers the composer's native submit path — draft / attachments / queue / busy arbitration are all reused, never re-implemented. The synthetic event re-enters the capture phase; a synchronous flag prevents recursion.
-- **Newline**: `document.execCommand("insertText", "\n")` fires the native `input` event, so draft sync follows the exact same path as Shift+Enter.
+- **Newline**: the keymap dispatches a synthesized Shift+Enter `keydown` (`bubbles: true`) on the composer editor, so the composer's own keymap passes Shift+Enter through and Lexical's native Enter handling inserts the line break — the exact path a real Shift+Enter takes, so draft sync is identical. The former `document.execCommand("insertText", "\n")` approach no longer works on the current Lexical composer (dsh web 0.1.2-rc.1 / Chrome 152): it reports success but Chromium never dispatches a `beforeinput`, and Lexical reconciles the untouched DOM back — verified live and replaced by the synthesized-keydown route.
 - **Persistence**: the browser half binds the `enter-send` namespace via `settingsScope`; the host half registers a schemastery schema (`mode: "enter" | "ctrl-enter"`) writing to `$DSH_HOME/settings.yaml`. The choice is also mirrored to browser `localStorage`, so it can survive restarts even in non-loopback/memory-mode pages.
 
 ## Directory Layout
@@ -104,7 +104,7 @@ bun test                 # keymap unit tests + bundle-shape smoke test (requires
 ## Compatibility Notes
 
 - The plugin identifies the current Lexical composer through `data-composer-input` + `data-phase` and keeps legacy textarea support; if upstream changes these markers, update `isComposerTarget` / `findComposerTarget` accordingly.
-- `document.execCommand("insertText")` is deprecated but supported in every Chromium release; if it is ever removed, switch to `beforeinput` / `InputEvent` injection (see the comments in `src/client/keymap.ts`).
+- The newline action no longer relies on `document.execCommand` (verified broken on the current Lexical composer); it dispatches a synthesized Shift+Enter keydown through the composer's native newline path instead. If upstream changes the Enter / Shift+Enter keymap handling, update `newlineViaComposer` accordingly (see `src/client/keymap.ts`).
 
 ## License
 

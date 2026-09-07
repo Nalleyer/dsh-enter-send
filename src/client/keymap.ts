@@ -9,9 +9,17 @@
  * - "send": dispatch a synthesized plain-Enter keydown that bubbles to
  *   React's root listener, so the composer's own submit path runs unchanged
  *   (draft, attachments, queue/busy arbitration — all native).
- * - "newline": `document.execCommand("insertText", "\n")` on the focused
- *   editable surface, which fires the native input event and keeps React's
- *   draft store in sync exactly like the browser-default Shift+Enter path.
+ * - "newline": dispatch a synthesized Shift+Enter keydown on the composer, so
+ *   the composer's own keymap passes it through to Lexical's native Enter
+ *   handling, which inserts the line break — the exact path a real
+ *   Shift+Enter takes (editor state and draft store stay in sync).
+ *
+ * Formerly the newline action used document.execCommand("insertText", "\n").
+ * On the current dsh composer (Lexical contenteditable, web 0.1.2-rc.1) that
+ * call reports success but Chromium never dispatches a beforeinput (only a
+ * data-less input), Lexical reconciles the untouched DOM back, and no
+ * newline appears — verified live against the running app, so the
+ * synthesized-keydown route below replaces it.
  *
  * IME composition (keyCode 229 / isComposing) always passes through, and
  * Shift+Enter always passes through (newline in both modes).
@@ -103,12 +111,32 @@ export function decide(mode: SendMode, e: KeyFacts, eligible: boolean, composing
   return resolveAction(mode, e);
 }
 
-/** Insert a newline into the focused editable element (fires React onChange). */
-export function insertNewline(target: HTMLElement): void {
-  target.focus();
-  // Deprecated but universally supported in Chromium; fires the native
-  // `input` event so React's draft store syncs exactly like Shift+Enter.
-  document.execCommand("insertText", false, "\n");
+/**
+ * Ask the composer to insert a line break by dispatching a synthesized
+ * Shift+Enter keydown that bubbles to the composer's own keymap. The
+ * composer passes Shift+Enter through (KEY_ENTER with shiftKey returns
+ * unhandled), and Lexical's native Enter handling inserts the line break —
+ * exactly like a real Shift+Enter, so the editor state and the React draft
+ * store stay in sync. Untrusted events run the same DOM listeners, so no
+ * isTrusted gate applies (verified against the live composer).
+ */
+export function newlineViaComposer(target: HTMLElement): void {
+  // Legacy textarea composer (dsh <= 0.1.1): a synthesized keydown is
+  // untrusted, so the browser's default newline editing action never runs;
+  // execCommand still inserts through the textarea editing path there.
+  if (target.tagName.toLowerCase() === "textarea") {
+    target.focus();
+    document.execCommand("insertText", false, "\n");
+    return;
+  }
+  target.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "Enter",
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
 }
 
 /**
@@ -123,12 +151,12 @@ export function sendViaComposer(target: HTMLElement): void {
 
 /** DOM-backed actions used by the installed listener. */
 export interface KeymapActions {
-  insertNewline(target: HTMLElement): void;
+  newlineViaComposer(target: HTMLElement): void;
   sendViaComposer(target: HTMLElement): void;
 }
 
 export const domActions: KeymapActions = {
-  insertNewline,
+  newlineViaComposer,
   sendViaComposer,
 };
 
@@ -143,7 +171,7 @@ export function handleKeydown(mode: SendMode, e: KeyboardEvent, actions: KeymapA
   e.preventDefault();
   e.stopPropagation();
   if (action === "send") actions.sendViaComposer(target);
-  else actions.insertNewline(target);
+  else actions.newlineViaComposer(target);
   return true;
 }
 

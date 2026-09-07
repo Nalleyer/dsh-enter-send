@@ -1,6 +1,6 @@
 {
   "name": "dsh-enter-send",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Send-shortcut remap for the DSH composer: Enter vs Ctrl/Cmd+Enter, with a Settings → General preference row.",
   "type": "module",
   "main": "lib/index.js",

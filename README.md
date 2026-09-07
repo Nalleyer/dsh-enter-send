@@ -79,7 +79,7 @@ bun test                 # keymap 逻辑单测 + bundle 形态冒烟测试（需
 
 - **拦截层**：`document` 捕获阶段 keydown 监听（`addEventListener(..., true)`），先于 React 委托的 composer `onKeyDown`。命中条件：目标是 composer 的可编辑区域（兼容旧版 textarea，以及新版带 `data-composer-input`、`data-phase` 且 `contenteditable="true"` 的 Lexical 编辑器）、非 disabled、非 IME 组合 `isComposing || keyCode === 229`。
 - **发送**：拦截后向 composer 编辑区域派发合成的无修饰 Enter `keydown`（`bubbles: true`），冒泡到 React root 触发 composer 原生提交路径——草稿 / 附件 / 队列 / busy 仲裁全部复用，不重复实现。合成事件会再次经过捕获阶段，由同步标志防重入。
-- **换行**：`document.execCommand("insertText", "\n")`，触发原生 `input` 事件，草稿同步与 Shift+Enter 路径一致。
+- **换行**：向 composer 编辑区域派发合成的 Shift+Enter `keydown`（`bubbles: true`），走 composer 自身的原生换行路径（KEY_ENTER 对 Shift+Enter 放行，Lexical 的 Enter 处理插入换行符），草稿同步与真实 Shift+Enter 完全一致。早期版本依赖的 `document.execCommand("insertText", "\n")` 在当前 Lexical composer（dsh web 0.1.2-rc.1 / Chrome 152）上已实测失效——返回成功但不派发 `beforeinput`，Lexical 把未变化的 DOM 回滚，因此替换为上述合成 keydown 方案。
 - **持久化**：浏览器半通过 `settingsScope` 绑定 `enter-send` namespace，host 半注册 schemastery schema（`mode: "enter" | "ctrl-enter"`），读写 `$DSH_HOME/settings.yaml`；选择同时存入浏览器 `localStorage`，在非 loopback/内存模式下也能跨重启保留。
 
 ## 目录结构
@@ -105,7 +105,7 @@ bun test                 # keymap 逻辑单测 + bundle 形态冒烟测试（需
 ## 兼容性说明
 
 - 插件通过 composer 的 `data-phase` 与 `data-composer-input` 属性识别新版 Lexical 编辑器，同时保留旧版 textarea 兼容；若上游调整这些标记，需同步更新 `isComposerTarget` / `findComposerTarget`。
-- `document.execCommand("insertText")` 已被标记废弃，但 Chromium 全版本支持；若未来被移除，需改用 `beforeinput` / `InputEvent` 注入（见 `src/client/keymap.ts` 内注释）。
+- 换行动作不再依赖 `document.execCommand`（在当前 Lexical composer 上实测失效），改为合成 Shift+Enter keydown 走 composer 原生换行路径；若上游调整 Enter / Shift+Enter 的 keymap 处理，需同步更新 `newlineViaComposer`（见 `src/client/keymap.ts`）。
 
 ## License
 
