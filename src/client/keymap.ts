@@ -15,11 +15,10 @@
  *   Shift+Enter takes (editor state and draft store stay in sync).
  *
  * Formerly the newline action used document.execCommand("insertText", "\n").
- * On the current dsh composer (Lexical contenteditable, web 0.1.2-rc.1) that
- * call reports success but Chromium never dispatches a beforeinput (only a
- * data-less input), Lexical reconciles the untouched DOM back, and no
- * newline appears — verified live against the running app, so the
- * synthesized-keydown route below replaces it.
+ * On the Lexical contenteditable composer that call reports success but
+ * Chromium never dispatches a beforeinput (only a data-less input), Lexical
+ * reconciles the untouched DOM back, and no newline appears — verified live
+ * against the running app, so the synthesized-keydown route below replaces it.
  *
  * IME composition (keyCode 229 / isComposing) always passes through, and
  * Shift+Enter always passes through (newline in both modes).

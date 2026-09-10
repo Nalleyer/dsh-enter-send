@@ -16,7 +16,7 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 
 ### Prerequisites
 
-- dsh `0.1.2-rc.1` (web platform): currently tested version; it is also the declared minimum, while newer versions require a compatibility check
+- dsh `0.1.2-rc.1` (web platform): the declared minimum; compatibility is verified up to `0.1.5-rc.1` (latest release), while newer versions require a fresh check
 - Installing from git runs the `prepare` script to build the package: the toolchain is esbuild (npm ecosystem — Node.js only; installed automatically as a devDependency); setups with bun installed fall back to bun automatically
 - Running the tests requires [bun](https://bun.sh) (development only)
 
@@ -71,14 +71,14 @@ dsh plugin --profile web remove dsh-enter-send   # removes the dependency and it
 ```powershell
 node scripts/build.mjs   # produces lib/index.js (host half) + lib/client.js (browser half)
                          # esbuild (npm) first; falls back to bun when esbuild is absent
-bun test                 # keymap unit tests + bundle-shape smoke test (requires bun)
+bun test                 # keymap unit tests + composer-contract regression + bundle-shape smoke test (requires bun)
 ```
 
 ## How It Works
 
 - **Interception**: a capture-phase `keydown` listener on `document` (`addEventListener(..., true)`) runs before React's delegated composer `onKeyDown`. It recognizes the composer's editable surface (both the legacy textarea and the current Lexical editor with `data-composer-input`, `data-phase`, and `contenteditable="true"`), while excluding disabled and composing input (`isComposing || keyCode === 229`).
 - **Sending**: the keymap dispatches a synthesized unmodified-Enter `keydown` (`bubbles: true`) on the composer editor, which bubbles to the React root and triggers the composer's native submit path — draft / attachments / queue / busy arbitration are all reused, never re-implemented. The synthetic event re-enters the capture phase; a synchronous flag prevents recursion.
-- **Newline**: the keymap dispatches a synthesized Shift+Enter `keydown` (`bubbles: true`) on the composer editor, so the composer's own keymap passes Shift+Enter through and Lexical's native Enter handling inserts the line break — the exact path a real Shift+Enter takes, so draft sync is identical. The former `document.execCommand("insertText", "\n")` approach no longer works on the current Lexical composer (dsh web 0.1.2-rc.1 / Chrome 152): it reports success but Chromium never dispatches a `beforeinput`, and Lexical reconciles the untouched DOM back — verified live and replaced by the synthesized-keydown route.
+- **Newline**: the keymap dispatches a synthesized Shift+Enter `keydown` (`bubbles: true`) on the composer editor, so the composer's own keymap passes Shift+Enter through and Lexical's native Enter handling inserts the line break — the exact path a real Shift+Enter takes, so draft sync is identical. The former `document.execCommand("insertText", "\n")` approach no longer works on the current Lexical composer: it reports success but Chromium never dispatches a `beforeinput`, and Lexical reconciles the untouched DOM back — verified live and replaced by the synthesized-keydown route (re-confirmed on `0.1.5-rc.1`).
 - **Persistence**: the browser half binds the `enter-send` namespace via `settingsScope`; the host half registers a schemastery schema (`mode: "enter" | "ctrl-enter"`) writing to `$DSH_HOME/settings.yaml`. The choice is also mirrored to browser `localStorage`, so it can survive restarts even in non-loopback/memory-mode pages.
 
 ## Directory Layout
@@ -98,13 +98,19 @@ bun test                 # keymap unit tests + bundle-shape smoke test (requires
 │       ├── styles.ts     # row styles (runtime-injected <style>, removed on unload)
 │       └── contract.d.ts # types only: pulls in the settings.general.item slot contract
 ├── lib/                  # build artifacts (.gitignored, not committed)
-└── test/                 # bun test: keymap logic + bundle-shape smoke
+└── test/                 # bun test: keymap logic + composer contract + bundle-shape smoke
 ```
 
 ## Compatibility Notes
 
-- The plugin identifies the current Lexical composer through `data-composer-input` + `data-phase` and keeps legacy textarea support; if upstream changes these markers, update `isComposerTarget` / `findComposerTarget` accordingly.
-- The newline action no longer relies on `document.execCommand` (verified broken on the current Lexical composer); it dispatches a synthesized Shift+Enter keydown through the composer's native newline path instead. If upstream changes the Enter / Shift+Enter keymap handling, update `newlineViaComposer` accordingly (see `src/client/keymap.ts`).
+Every upstream contract the plugin rides was re-checked against dsh `0.1.5-rc.1` (web platform) and none of them changed, so no keymap or DOM-detection logic was needed (this pass only completed the manifest list, aligned the row styling, and hardened the tests):
+
+- **Settings slot**: `settings.general.item` (list slot; `id` + `order` + `locale` + `inject` registration) is still the same shape the official `EnterBehaviorRow` uses (`id: composer-enter`, `order: 20`); this plugin registers `order: 21` right after it. Upstream still splits the work the same way — browser half registers the row through `ctx.slots.register(...)`, host half registers the schema through `ctx.inject(["settings"], ...)`.
+- **Composer DOM markers**: `data-composer-input` (`ComposerContentEditable`) and `data-phase` (`InputBar` passes `input?.phase ?? "inert"` through the same spread) still land on the same contenteditable div, with `contenteditable` mirroring `editable` and `aria-disabled` mirroring the disabled state — `isComposerTarget` / `findComposerTarget` need no change. If upstream splits or renames these markers, update them.
+- **Composer keymap**: `registerComposerKeymap` still returns `false` for Enter with `shiftKey === true` (passing it to Lexical's native newline) and routes every other Enter to `handlers.submit(ctrlKey || metaKey)`, so both the synthesized Shift+Enter newline and the synthesized plain-Enter send remain valid. If upstream changes Enter / Shift+Enter handling, update `newlineViaComposer` / `sendViaComposer` (see `src/client/keymap.ts`).
+- **Client module table**: `@deepseek-ai/dsh-client-store` and `@deepseek-ai/dsh-client-ui-primitives`, which `lib/client.js` requires, are both in the shell's static module table and are now also declared in `package.json`'s `dsh.client.inject`; `test/bundle-smoke.test.ts` keeps the manifest and the built `require` calls in sync.
+- **settingsScope / store API**: `ctx.settingsScope.bind({ namespace })` → `getSnapshot() / subscribe() / set(field, value)` and `createSnapshotStore(init, { persist: { name } })` are unchanged, and reads/writes still land in the `enter-send` section of `$DSH_HOME/settings.yaml`.
+- The newline action still avoids `document.execCommand` (verified broken on the current Lexical composer); that finding was re-confirmed on `0.1.5-rc.1`.
 
 ## License
 

@@ -3,11 +3,17 @@
  * module-loader handoff (`window.__ModuleLoader__.load({ id, factory })`) and
  * materialize to a plugin exporting `apply` + `inject`, with every external
  * `require` resolvable from the shell's static module table and the client
- * module graph.
+ * module graph — every one of them also declared in the manifest's
+ * `dsh.client.inject` list, which is the package's own statement of what the
+ * shell must have loaded before this factory runs.
  */
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
+
+const manifest = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { dsh: { client: { inject: string[] } } };
 
 test("client bundle registers the loader handoff and materializes", () => {
   const code = readFileSync(new URL("../lib/client.js", import.meta.url), "utf8");
@@ -49,4 +55,20 @@ test("client bundle registers the loader handoff and materializes", () => {
   assert.deepEqual(Object.keys(materialized).sort(), ["apply", "inject"]);
   assert.deepEqual(materialized.inject, ["slots", "locale", "connection", "remote", "settingsScope"]);
   assert.equal(typeof materialized.apply, "function");
+});
+
+test("every @deepseek-ai external require is declared in dsh.client.inject", () => {
+  const code = readFileSync(new URL("../lib/client.js", import.meta.url), "utf8");
+  // react / react/jsx-runtime ride the shell's permanent table and are never
+  // declared by plugins; every @deepseek-ai row is a manifest concern.
+  const required = [...code.matchAll(/require\("([^"]+)"\)/g)]
+    .map((match) => match[1])
+    .filter((spec) => spec.startsWith("@deepseek-ai/"));
+  assert.ok(required.length > 0, "bundle must keep its dsh externals as require calls");
+  for (const spec of required) {
+    assert.ok(
+      manifest.dsh.client.inject.includes(spec),
+      `require("${spec}") is missing from package.json dsh.client.inject`,
+    );
+  }
 });

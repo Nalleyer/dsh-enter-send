@@ -9,6 +9,7 @@ export const STYLE_TAG_ID = "dsh-enter-send/EnterSendRow.css";
 
 export const CSS = `
 .dsh-es_row{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}
+@media (min-resolution:1dppx){.dsh-es_row{border-bottom-width:.5px}}
 .dsh-es_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}
 .dsh-es_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}
 .dsh-es_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}
