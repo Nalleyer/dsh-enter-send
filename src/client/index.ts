@@ -21,8 +21,14 @@ import { installKeymap } from "./keymap.js";
 import { injectStyles } from "./styles.js";
 import { EnterSendPolicy } from "./submission.js";
 
-/** Services required by this browser plugin (fiber activation gates on them). */
-export const inject = ["slots", "remote", "configForms"];
+/**
+ * Services required by this browser plugin (fiber activation gates on them).
+ *
+ * `locale` must be listed even though it is read, not provided: the client
+ * runtime throws `cannot get property "locale" without inject` on undeclared
+ * service access, so `ctx.locale.register()` below fails activation without it.
+ */
+export const inject = ["slots", "locale", "configForms"];
 
 /** Mount the browser plugin. */
 export function apply(ctx: ClientContext): void {

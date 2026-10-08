@@ -127,7 +127,8 @@ Tests run through `node --import tsx --test` (Node 24's built-in runner, tsx for
 | 0.1.2 (broken) | 0.2.0-rc.2 (this release) |
 |---|---|
 | host `ctx.settings.register(ns, schema)` | the service only offers `configure / describe / update / replace / mutate`; the plugin now **exports a `Config` schema** (each profile entry owns its configuration) |
-| client `inject` includes `settingsScope` | `inject = ["slots", "remote", "configForms"]`; the preference rides `ctx.configForms.get(entryId)` |
+| client `inject` includes `settingsScope` | `inject = ["slots", "locale", "configForms"]`; the preference rides `ctx.configForms.get(entryId)` |
+| — | **service access is gated by `inject`**: reading an undeclared `ctx.<service>` throws `cannot get property "…" without inject`, so the dictionary `ctx.locale.register()` requires `"locale"` in the list |
 | `settingsScope.bind({ namespace }).set(field, v)` | `ctx.configForms.get(id).set(field, v)`; reads through `getSnapshot()/subscribe()` |
 | — | row registration now takes `store` / `inject` / `locale`; the `hooks` compartment becomes `useXxx` selector hooks |
 | `IconChevronDownOutline14` | `IconChevronDownOutlineRegular` (icon naming moved to `Regular`/`Medium`) |

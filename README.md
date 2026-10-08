@@ -126,7 +126,8 @@ pnpm typecheck           # tsc --noEmit，按真实 0.2.0-rc.2 类型检查
 | 0.1.2 写法（失效） | 0.2.0-rc.2（本版） |
 |---|---|
 | host 侧 `ctx.settings.register(ns, schema)` | 服务只提供 `configure / describe / update / replace / mutate`；改为**导出 `Config` schema**（profile 条目自带配置） |
-| 客户端 `inject` 含 `settingsScope` | `inject = ["slots", "remote", "configForms"]`，偏好走 `ctx.configForms.get(entryId)` |
+| 客户端 `inject` 含 `settingsScope` | `inject = ["slots", "locale", "configForms"]`，偏好走 `ctx.configForms.get(entryId)` |
+| — | **服务访问按 `inject` 门禁**：`ctx.<service>` 未列入 `inject` 即抛 `cannot get property "…" without inject`，注册字典的 `ctx.locale.register()` 因此必须声明 `"locale"` |
 | `settingsScope.bind({ namespace }).set(field, v)` | `ctx.configForms.get(id).set(field, v)`，读取用 `getSnapshot()/subscribe()` |
 | — | 设置行注册需要 `store` / `inject` / `locale`；`hooks` 隔间 → `useXxx` 选择器 Hook |
 | `IconChevronDownOutline14` | `IconChevronDownOutlineRegular`（图标命名改为 `Regular`/`Medium`） |
