@@ -23,7 +23,7 @@
  * IME composition (keyCode 229 / isComposing) always passes through, and
  * Shift+Enter always passes through (newline in both modes).
  */
-import type { SendMode } from "../types.js";
+import type { SendMode } from "../submission-settings.js";
 
 /** Action the keymap takes for one keydown. */
 export type KeyAction = "send" | "newline";

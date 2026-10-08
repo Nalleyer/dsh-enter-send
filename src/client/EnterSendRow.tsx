@@ -1,31 +1,39 @@
 /**
  * General-settings row for the send shortcut. Mirrors the official
- * EnterBehaviorRow: a title + description column and a Menu selector.
+ * EnterBehaviorRow / LanguageRow: a title + description column and a Menu
+ * selector, with the preference injected from the owning apply closure.
+ *
+ * The row's props are written explicitly (rather than through the
+ * `PropsRuntime` / `PropsLocale` / `InjectFace` composed-type aliases) so the
+ * component signature matches the registration's composed constraint without
+ * depending on how those aliases resolve under declaration merging.
  */
 import { useState } from "react";
-import { IconChevronDownOutline14, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
-import type { InjectFace, PropsLocale, PropsRuntime } from "@deepseek-ai/dsh-client-ui-slots";
-import type { SnapshotStore } from "@deepseek-ai/dsh-client-store";
-import { MODES } from "../types.js";
-import type { SendMode } from "../types.js";
+import type { ReactNode } from "react";
+import { IconChevronDownOutlineRegular, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
+import type { PropsLocale } from "@deepseek-ai/dsh-client-ui-slots";
+import type { SnapshotSelectorHook, SnapshotStore } from "@deepseek-ai/dsh-client-store";
+import { MODES } from "../submission-settings.js";
+import type { SendMode } from "../submission-settings.js";
 
-/** Registration-side preference face. */
+/** Registration-side preference face (`hooks.mode` arrives as `useMode`). */
 export interface EnterSendRowInjected {
   hooks: {
-    /** Persisted send-shortcut mode bound as useMode. */
+    /** Persisted send-shortcut mode, exposed to the component as `useMode`. */
     mode: SnapshotStore<SendMode>;
   };
   /** Change the send-shortcut mode. */
   setMode: (mode: SendMode) => void;
 }
 
-/** Full Settings-row props. */
-export type EnterSendRowProps = PropsRuntime<"settings.general.item"> &
-  PropsLocale<"enter-send"> &
-  InjectFace<EnterSendRowInjected>;
+/** Props the row consumes: the bound hook, the write path, and the `t` seat. */
+export interface EnterSendRowProps extends PropsLocale<"enter-send"> {
+  useMode: SnapshotSelectorHook<SendMode>;
+  setMode: (mode: SendMode) => void;
+}
 
 /** Render the send-shortcut mode selector. */
-export function EnterSendRow({ useMode, setMode, t }: EnterSendRowProps) {
+export function EnterSendRow({ useMode, setMode, t }: EnterSendRowProps): ReactNode {
   const mode = useMode((value) => value);
   const [open, setOpen] = useState(false);
   return (
@@ -59,7 +67,7 @@ export function EnterSendRow({ useMode, setMode, t }: EnterSendRowProps) {
             onClick={() => setOpen((value) => !value)}
           >
             {t(`settings.enterSend.mode.${mode}`)}
-            <IconChevronDownOutline14 className="dsh-es_chevron" />
+            <IconChevronDownOutlineRegular className="dsh-es_chevron" />
           </button>
         }
       />

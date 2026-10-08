@@ -143,9 +143,11 @@ export declare const MODE_FIELD = "mode";
 export declare const MODES: readonly ["enter", "ctrl-enter"];
 export declare type SendMode = (typeof MODES)[number];
 export declare const DEFAULT_MODE: SendMode;
+export declare const LOCALE_NS = "enter-send";
 export declare interface EnterSendSettings {
   mode?: SendMode;
 }
+export declare const Config: unknown;
 export declare function apply(ctx: unknown): void;
 `,
 );

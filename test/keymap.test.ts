@@ -1,10 +1,10 @@
 /**
- * Unit tests for the pure keymap logic. Run with: bun test  (or: node --test test/)
+ * Unit tests for the pure keymap logic. Run with: pnpm test (node --import tsx --test)
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { decide, isComposerTargetLike, resolveAction } from "../src/client/keymap.ts";
-import { DEFAULT_MODE, MODES } from "../src/types.ts";
+import { DEFAULT_MODE, MODES } from "../src/submission-settings.ts";
 
 const enter = { key: "Enter", ctrlKey: false, metaKey: false, shiftKey: false };
 const ctrlEnter = { key: "Enter", ctrlKey: true, metaKey: false, shiftKey: false };

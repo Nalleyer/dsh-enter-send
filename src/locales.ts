@@ -3,9 +3,9 @@
  * `LocaleNamespaceMap` merge that gives the component a typed `t` seat.
  */
 import type { LocaleDictOf } from "@deepseek-ai/dsh-client-ui-slots";
+import { LOCALE_NS } from "./submission-settings.js";
 
-/** Locale namespace owning the settings-row copy. */
-export const LOCALE_NS = "enter-send";
+export { LOCALE_NS };
 
 declare module "@deepseek-ai/dsh-client-ui-slots" {
   interface LocaleNamespaceMap {

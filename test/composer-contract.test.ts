@@ -2,18 +2,20 @@
  * Composer-contract regression tests.
  *
  * These lock the two upstream facts the plugin rides, both re-verified against
- * dsh 0.1.5-rc.1 (`dsh-client-ui-conversation/lib/client.js`):
+ * dsh 0.2.0-rc.2 (`dsh-client-ui-conversation/lib/client.js`):
  *
  * 1. DOM shape — the composer surface is a `<div>` carrying BOTH
  *    `data-composer-input` (ComposerContentEditable) and `data-phase`
  *    (InputBar passes `input?.phase ?? "inert"` through the same spread), with
  *    `contenteditable` mirrored from `editable` and `aria-disabled` set while
  *    the editor is disabled.
- * 2. Key routing — the composer's `registerComposerKeymap` returns false for
+ * 2. Key routing — the composer's own keymap returns false for
  *    `event.shiftKey === true` on KEY_ENTER (so Lexical's native handler
- *    inserts the line break) and calls `handlers.submit(ctrlKey || metaKey)`
- *    otherwise. The plugin therefore only has to turn a remapped key into the
- *    right synthesized keydown; everything downstream stays native.
+ *    inserts the line break) and submits otherwise. The plugin therefore only
+ *    has to turn a remapped key into the right synthesized keydown;
+ *    everything downstream stays native.
+ *
+ * Run with `node --test` (Node strips the type annotations) or `bun test`.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -22,11 +24,15 @@ import type { KeymapActions } from "../src/client/keymap.ts";
 
 /** Minimal stand-in for the composer's editable element. */
 class FakeElement {
-  constructor(
-    readonly tagName: string,
-    readonly attrs: Record<string, string>,
-    readonly parent: FakeElement | null = null,
-  ) {}
+  tagName: string;
+  attrs: Record<string, string>;
+  parent: FakeElement | null;
+
+  constructor(tagName: string, attrs: Record<string, string>, parent: FakeElement | null = null) {
+    this.tagName = tagName;
+    this.attrs = attrs;
+    this.parent = parent;
+  }
 
   hasAttribute(name: string): boolean {
     return name in this.attrs;
@@ -42,18 +48,23 @@ class FakeElement {
       .split(",")
       .map((part) => part.trim())
       .map((part) => (part.match(/\[([^\]]+)\]/g) ?? []).map((attr) => attr.slice(1, -1)));
-    for (let node: FakeElement | null = this; node !== null; node = node.parent) {
+    let node: FakeElement | null = this;
+    while (node !== null) {
       for (const attrNames of required) {
-        if (attrNames.every((name) => node!.hasAttribute(name))) return node;
+        if (attrNames.every((name) => node !== null && node.hasAttribute(name))) return node;
       }
+      node = node.parent;
     }
     return null;
   }
 }
 
 // `findComposerTarget` narrows with `instanceof Element` / `instanceof
-// HTMLElement`; seed those globals so the fake elements below pass the gate.
-Object.assign(globalThis, { Element: FakeElement, HTMLElement: FakeElement });
+// HTMLElement`; seeding those globals with the fake makes both the runtime
+// check and the compile-time narrowing accept the stand-ins below.
+const globals = globalThis as unknown as Record<string, unknown>;
+globals.Element = FakeElement;
+globals.HTMLElement = FakeElement;
 
 /** Current composer: contenteditable div with both markers on one element. */
 function composerElement(overrides: Record<string, string> = {}): FakeElement {
@@ -76,7 +87,7 @@ function recordingActions(): KeymapActions & { calls: Array<{ kind: string; key:
 }
 
 /** Minimal keydown event the handler reads. */
-function keyEvent(overrides: Partial<Record<string, unknown>> = {}): KeyboardEvent {
+function keyEvent(overrides: Record<string, unknown> = {}): KeyboardEvent {
   return {
     key: "Enter",
     ctrlKey: false,
@@ -99,15 +110,15 @@ test("findComposerTarget walks up to the marked composer surface", () => {
     root,
   );
   const decoratedChild = new FakeElement("SPAN", {}, composer);
-  assert.equal(findComposerTarget(decoratedChild), composer);
-  assert.equal(findComposerTarget(composer), composer);
+  assert.equal(findComposerTarget(decoratedChild as never), composer);
+  assert.equal(findComposerTarget(composer as never), composer);
   // A bare `data-phase` container (the conversation root) is not the composer.
-  assert.equal(findComposerTarget(root), null);
+  assert.equal(findComposerTarget(root as never), null);
 });
 
 test("findComposerTarget rejects a read-only or non-editable surface", () => {
-  assert.equal(findComposerTarget(composerElement({ contenteditable: "false" })), null);
-  assert.equal(findComposerTarget(composerElement({ "aria-disabled": "true" })), null);
+  assert.equal(findComposerTarget(composerElement({ contenteditable: "false" }) as never), null);
+  assert.equal(findComposerTarget(composerElement({ "aria-disabled": "true" }) as never), null);
   assert.equal(findComposerTarget(null), null);
 });
 

@@ -5,6 +5,15 @@ node_modules/
 # Build artifacts; regenerate with `node scripts/build.mjs`.
 lib/
 
+# Install lockfile: only the plugin's own build/test deps live here, while the
+# dsh runtime resolves the plugin's peers from its own installation, so a lock
+# committed from one machine does not describe anyone else's install.
+pnpm-lock.yaml
+
 # Throwaway scratch dirs (upstream clones, npm/pnpm sandboxes).
 .tmp-*/
 .upstream-*/
+
+# Ad-hoc type probes.
+probe-types.ts
+tsconfig.probe.json
