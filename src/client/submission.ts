@@ -44,12 +44,19 @@ export class EnterSendPolicy {
   /**
    * Change the send shortcut mode; the live value publishes before the durable
    * write starts.
+   *
+   * The Host write stays fire-and-forget: the local snapshot is what the keymap
+   * reads, so a refused write only costs durability. `ConfigForm.set` resolves
+   * `false` for a refusal but REJECTS on transport failure, and since dsh
+   * 0.2.1 every client form writes across the wire (0.2.0's browser-local
+   * `memory` form mode is gone), so the rejection is swallowed rather than left
+   * as an unhandled promise rejection.
    * @param mode - plain-Enter or Ctrl/Cmd-Enter sends.
    */
   setMode(mode: SendMode): void {
     if (this.mode.getSnapshot() === mode) return;
     this.mode.set(mode);
-    void this.host?.set(MODE_FIELD, mode);
+    void this.host?.set(MODE_FIELD, mode).catch(() => {});
   }
 
   /**

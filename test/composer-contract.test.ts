@@ -2,7 +2,8 @@
  * Composer-contract regression tests.
  *
  * These lock the two upstream facts the plugin rides, both re-verified against
- * dsh 0.2.0-rc.2 (`dsh-client-ui-conversation/lib/client.js`):
+ * dsh 0.2.1-rc.2 (`dsh-client-ui-conversation/lib/client.js`; unchanged from
+ * 0.2.0-rc.2):
  *
  * 1. DOM shape — the composer surface is a `<div>` carrying BOTH
  *    `data-composer-input` (ComposerContentEditable) and `data-phase`

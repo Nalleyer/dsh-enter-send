@@ -18,9 +18,9 @@ DeepSeek Harness（dsh）客户端插件：在 **设置 → 常规** 页面新�
 
 ### 前置条件
 
-- dsh `0.2.0-rc.2`（web 平台）：本版按该版本的客户端 API 重写，`0.1.x` 不再兼容（原因见下方「兼容性说明」）。
+- dsh `0.2.1-rc.2`（web 平台）：本版按该版本的客户端 API 复核；它和 `0.2.0-rc.2` 之间只有增量改动，两个版本都能跑。`0.1.x` 不再兼容（原因见下方「兼容性说明」）。
   - **桌面版**自带这套运行时，直接可装；
-  - **CLI / web profile** 需先把 `@deepseek-ai/dsh` 升到 `0.2.x` 一线——目前 npm 上是 `0.1.5-rc.3`，在它下面装本版会复现"装了不激活"。
+  - **CLI / web profile** 需先把 `@deepseek-ai/dsh` 升到 `0.2.x` 一线——npm 上已发布 `0.2.1-rc.2`；在 `0.1.x` 下面装本版会复现"装了不激活"。
 - 从 git 安装时会运行 `prepare` 脚本自动构建：构建工具链是 esbuild（npm 生态，只需 Node.js，随 devDependencies 自动安装）；本机有 bun 时回退用 bun 构建。
 
 ### 方式一：桌面版（推荐，官方入口）
@@ -81,10 +81,10 @@ dsh plugin --profile web remove dsh-enter-send
 ## 构建与测试
 
 ```powershell
-pnpm install             # 安装开发依赖（esbuild、typescript、tsx、0.2.0-rc.2 类型包）
+pnpm install             # 安装开发依赖（esbuild、typescript、tsx、0.2.1-rc.2 类型包）
 node scripts/build.mjs   # 产出 lib/index.js（host 半）+ lib/client.js（浏览器半）
 pnpm test                # keymap 单测 + composer 契约回归 + 提交策略单测 + bundle 形态冒烟
-pnpm typecheck           # tsc --noEmit，按真实 0.2.0-rc.2 类型检查
+pnpm typecheck           # tsc --noEmit，按真实 0.2.1-rc.2 类型检查
 ```
 
 测试用 `node --import tsx --test`（Node 24 自带 test runner，tsx 负责 TS 转译）；`pnpm test:bun` 保留了 bun 入口。
@@ -123,7 +123,7 @@ pnpm typecheck           # tsc --noEmit，按真实 0.2.0-rc.2 类型检查
 
 **本版是一次 API 迁移，不是清单微调。** 0.1.2 版依赖的三个上游契约在 0.2.0-rc.2 上全部变了，旧版装上去会**静默不激活**（客户端 fiber 等不到 `settingsScope` 服务），表现就是"装了没反应"：
 
-| 0.1.2 写法（失效） | 0.2.0-rc.2（本版） |
+| 0.1.2 写法（失效） | 0.2.x（本版） |
 |---|---|
 | host 侧 `ctx.settings.register(ns, schema)` | 服务只提供 `configure / describe / update / replace / mutate`；改为**导出 `Config` schema**（profile 条目自带配置） |
 | 客户端 `inject` 含 `settingsScope` | `inject = ["slots", "locale", "configForms"]`，偏好走 `ctx.configForms.get(entryId)` |
@@ -132,13 +132,25 @@ pnpm typecheck           # tsc --noEmit，按真实 0.2.0-rc.2 类型检查
 | — | 设置行注册需要 `store` / `inject` / `locale`；`hooks` 隔间 → `useXxx` 选择器 Hook |
 | `IconChevronDownOutline14` | `IconChevronDownOutlineRegular`（图标命名改为 `Regular`/`Medium`） |
 
-仍成立的契约（已逐项复核 0.2.0-rc.2 产物）：
+仍成立的契约（已逐项复核 0.2.1-rc.2 产物）：
 
 - **设置行插槽**：`settings.general.item`（列表型，`id` + `order` + `locale` + `inject`）与官方 `EnterBehaviorRow`（`id: composer-enter`, `order: 20`）同构；本插件用 `order: 21` 紧随其后。
 - **条目 id 对齐**：`configForms.get()` 的 key 是 **profile 里的插件条目 id**，因此 `cordis.patch.yml` 的插入行写成 `id: enter-send`，与客户端里的 `SETTINGS_NAMESPACE` 一致。若将来安装器改用别的行 id，改这一处即可（`src/submission-settings.ts`）。
 - **composer DOM 标记**：`data-composer-input`（`ComposerContentEditable`）与 `data-phase`（`InputBar` 以 `input?.phase ?? "inert"` 透传）仍落在同一个 contenteditable div 上，`contenteditable` 随 `editable`、`aria-disabled` 随禁用态同步——`isComposerTarget` / `findComposerTarget` 无需调整。上游若拆开这两个属性或改名，需同步更新。
 - **composer 键位**：`registerComposerKeymap` 对 `shiftKey === true` 的 Enter 仍返回 `false`（放行给 Lexical 原生换行），其余 Enter 提交；因此合成 Shift+Enter 换行、合成无修饰 Enter 发送两条路径都仍然成立。上游若改动 Enter / Shift+Enter 的处理，需同步更新 `newlineViaCursor` / `sendViaComposer`（见 `src/client/keymap.ts`）。
 - **客户端模块表**：`lib/client.js` 以 `require` 取用的 `@deepseek-ai/dsh-client-store` 与 `@deepseek-ai/dsh-client-ui-primitives` 在 shell 的静态模块表内，且已写入 `package.json` 的 `dsh.client.inject`；两者一致性由 `test/bundle-smoke.test.ts` 守住。
+
+### 0.2.1-rc.2 复核结果
+
+按桌面版 0.2.1-rc.2 的实装产物（`app.asar` 内 `dsh/package.json` 版本 `0.2.1-rc.2`，cordis `4.0.5`，schemastery `3.18.5`）逐项复核，并用 npm 上真实的 `0.2.1-rc.2` 类型包做了 `tsc --noEmit`：**插件代码无需改动，只补了一处健壮性处理**。
+
+- **依赖实现没变**：`dsh-client-store`、`dsh-client-locale`、`dsh-settings` 的 `lib` 输出与 0.2.0-rc.2 逐字节相同；`schemastery`（3.18.4 → 3.18.5）与 `cordis`（4.0.4 → 4.0.5）只有版本号与依赖范围变化，`lib` 相同。
+- **`dsh-client-ui-slots` / `dsh-client-ui-renderer` 只有增量**：新增 `inline` 插槽选项与 keyed hook 的 `member` 形参，本插件用的 `register` / `inject` / `hooks` 形态不变。
+- **`dsh-client-ui-settings` 移除了"浏览器本地 memory 表单模式"**（`ConfigFormSnapshot.mode`、`ConfigForms.persistence`）：本插件只读 `getSnapshot().value`、写 `set(field, value)`，不受影响。副作用是所有客户端表单写入都跨网络（`set()` 在传输失败时 reject），因此 `setMode` 给写入补了 `.catch()`，避免断线/被拒时冒出 unhandled rejection。
+- **composer 契约不变**：`data-composer-input` + `data-phase` 仍由 `DraftEditor` 透传到同一个 contenteditable div，`KEY_ENTER` 仍对 `shiftKey === true` 放行、其余走 `submit(ctrlKey || metaKey)`；`isComposing || keyCode === 229` 的组合输入判断也没变。
+- **设置行插槽未变**：0.2.1 官方 `settings.general.item` 的 order 为 `-20/0/10/11/12/15/16/17/20/30/90/100`，本插件的 `21` 仍紧随官方 `composer-enter`（order 20，管的是 busy 时 Enter 是排队还是打断），无冲突。
+- **客户端投递契约未变**：仍是 `window.__ModuleLoader__.load({ id, factory })`，bundle 也只 `require` shell 静态模块表里的 `@deepseek-ai/dsh-client-store` 与 `@deepseek-ai/dsh-client-ui-primitives`（`Menu`、`IconChevronDownOutlineRegular` 都还在表内），因此**不需要** `dsh.client.external`。
+- **清单字段未变**：`dsh.bundle.patch`、`dsh.client.platform`、`dsh.client.inject` 照旧读取；0.2.1 的类型注释明确 `inject` 是"包名依赖信息，不是 Cordis 服务注入"。本版顺带补了 `dsh.manifestVersion: 1` 与 `engines.dsh`，把兼容范围写成声明（当前 dsh 不强制校验这两项）。
 
 ## License
 

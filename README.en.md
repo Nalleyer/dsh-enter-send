@@ -18,9 +18,9 @@ DeepSeek Harness (dsh) client plugin: adds a **Send shortcut** option to **Setti
 
 ### Prerequisites
 
-- dsh `0.2.0-rc.2` (web platform): this release is a rewrite against that version's client API; `0.1.x` is no longer supported (see Compatibility Notes below).
+- dsh `0.2.1-rc.2` (web platform): this release is re-verified against that version's client API; `0.2.0-rc.2` differs only by additive changes, so both work. `0.1.x` is no longer supported (see Compatibility Notes below).
   - The **Desktop app** bundles that runtime, so it works as-is;
-  - **CLI / web profile** needs `@deepseek-ai/dsh` upgraded to the `0.2.x` line first — npm currently serves `0.1.5-rc.3`, where this release reproduces the "installed but never activates" failure.
+  - **CLI / web profile** needs `@deepseek-ai/dsh` upgraded to the `0.2.x` line first — npm already serves `0.2.1-rc.2`; on `0.1.x` this release reproduces the "installed but never activates" failure.
 - Installing from git runs the `prepare` script to build the package: the toolchain is esbuild (npm ecosystem — Node.js only; installed automatically as a devDependency); setups with bun installed fall back to bun.
 
 ### Option 1: Desktop app (recommended, official entry point)
@@ -82,10 +82,10 @@ Any leftover configuration for the plugin entry is harmless; remove it manually 
 ## Build & Test
 
 ```powershell
-pnpm install             # dev dependencies (esbuild, typescript, tsx, 0.2.0-rc.2 type packages)
+pnpm install             # dev dependencies (esbuild, typescript, tsx, 0.2.1-rc.2 type packages)
 node scripts/build.mjs   # produces lib/index.js (host half) + lib/client.js (browser half)
 pnpm test                # keymap + composer contract + submission policy + bundle-shape smoke
-pnpm typecheck           # tsc --noEmit against the real 0.2.0-rc.2 types
+pnpm typecheck           # tsc --noEmit against the real 0.2.1-rc.2 types
 ```
 
 Tests run through `node --import tsx --test` (Node 24's built-in runner, tsx for TS transpilation); `pnpm test:bun` keeps the bun entry point.
@@ -124,7 +124,7 @@ Tests run through `node --import tsx --test` (Node 24's built-in runner, tsx for
 
 **This release is an API migration, not a manifest tweak.** All three upstream contracts the 0.1.2 release rode changed in 0.2.0-rc.2, and the old build **silently fails to activate** there (the client fiber never resolves the `settingsScope` service) — which looks exactly like "installed but nothing happens":
 
-| 0.1.2 (broken) | 0.2.0-rc.2 (this release) |
+| 0.1.2 (broken) | 0.2.x (this release) |
 |---|---|
 | host `ctx.settings.register(ns, schema)` | the service only offers `configure / describe / update / replace / mutate`; the plugin now **exports a `Config` schema** (each profile entry owns its configuration) |
 | client `inject` includes `settingsScope` | `inject = ["slots", "locale", "configForms"]`; the preference rides `ctx.configForms.get(entryId)` |
@@ -133,13 +133,25 @@ Tests run through `node --import tsx --test` (Node 24's built-in runner, tsx for
 | — | row registration now takes `store` / `inject` / `locale`; the `hooks` compartment becomes `useXxx` selector hooks |
 | `IconChevronDownOutline14` | `IconChevronDownOutlineRegular` (icon naming moved to `Regular`/`Medium`) |
 
-Contracts that still hold (each re-verified against the 0.2.0-rc.2 artifacts):
+Contracts that still hold (each re-verified against the 0.2.1-rc.2 artifacts):
 
 - **Settings slot**: `settings.general.item` (list slot; `id` + `order` + `locale` + `inject`) is the same shape the official `EnterBehaviorRow` uses (`id: composer-enter`, `order: 20`); this plugin registers `order: 21` right after it.
 - **Entry id alignment**: the key for `configForms.get()` is the **plugin entry id inside the profile**, so `cordis.patch.yml` inserts a row with `id: enter-send`, matching `SETTINGS_NAMESPACE` in the client half. If a future installer uses a different row id, that single constant in `src/submission-settings.ts` is the only change needed.
 - **Composer DOM markers**: `data-composer-input` (`ComposerContentEditable`) and `data-phase` (`InputBar` passes `input?.phase ?? "inert"` through the same spread) still land on the same contenteditable div, with `contenteditable` mirroring `editable` and `aria-disabled` mirroring the disabled state — `isComposerTarget` / `findComposerTarget` need no change. If upstream splits or renames these markers, update them.
 - **Composer keymap**: `registerComposerKeymap` still returns `false` for Enter with `shiftKey === true` (passing it to Lexical's native newline) and submits every other Enter, so both the synthesized Shift+Enter newline and the synthesized plain-Enter send remain valid. If upstream changes Enter / Shift+Enter handling, update `newlineViaComposer` / `sendViaComposer` (see `src/client/keymap.ts`).
 - **Client module table**: `@deepseek-ai/dsh-client-store` and `@deepseek-ai/dsh-client-ui-primitives`, which `lib/client.js` requires, are both in the shell's static module table and are declared in `package.json`'s `dsh.client.inject`; `test/bundle-smoke.test.ts` keeps the manifest and the built `require` calls in sync.
+
+### 0.2.1-rc.2 re-verification
+
+Checked against the Desktop app's shipped 0.2.1-rc.2 artifacts (`dsh/package.json` inside `app.asar` reports `0.2.1-rc.2`, cordis `4.0.5`, schemastery `3.18.5`) and with `tsc --noEmit` against the real `0.2.1-rc.2` type packages from npm: **no plugin code changes were needed; one robustness fix was added**.
+
+- **Dependency implementations unchanged**: the `lib` output of `dsh-client-store`, `dsh-client-locale`, and `dsh-settings` is byte-identical to 0.2.0-rc.2; `schemastery` (3.18.4 → 3.18.5) and `cordis` (4.0.4 → 4.0.5) only changed version/dependency ranges, with identical `lib` output.
+- **`dsh-client-ui-slots` / `dsh-client-ui-renderer` changes are additive**: a new `inline` slot option and a `member` parameter on keyed hooks; the `register` / `inject` / `hooks` shapes this plugin uses are unchanged.
+- **`dsh-client-ui-settings` dropped the browser-local "memory" form mode** (`ConfigFormSnapshot.mode`, `ConfigForms.persistence`): the plugin only reads `getSnapshot().value` and writes `set(field, value)`, so nothing breaks. The side effect is that every client form write now crosses the wire (`set()` rejects on transport failure), so `setMode` now `.catch()`es the write instead of leaving an unhandled rejection.
+- **Composer contract unchanged**: `data-composer-input` + `data-phase` are still spread onto the same contenteditable div by `DraftEditor`, and `KEY_ENTER` still passes `shiftKey === true` through while submitting everything else via `submit(ctrlKey || metaKey)`; the `isComposing || keyCode === 229` composition guard is unchanged too.
+- **Settings slot unchanged**: the official 0.2.1 `settings.general.item` orders are `-20/0/10/11/12/15/16/17/20/30/90/100`, so this plugin's `21` still sits right behind the official `composer-enter` row (order 20, which governs whether Enter queues or steers while busy) with no collision.
+- **Client delivery contract unchanged**: still `window.__ModuleLoader__.load({ id, factory })`, and the bundle only requires `@deepseek-ai/dsh-client-store` and `@deepseek-ai/dsh-client-ui-primitives` from the shell's static module table (`Menu` and `IconChevronDownOutlineRegular` are both still exported there), so **no `dsh.client.external`** is needed.
+- **Manifest fields unchanged**: `dsh.bundle.patch`, `dsh.client.platform`, and `dsh.client.inject` are read as before; the 0.2.1 type comments state `inject` is package-name dependency information, not Cordis service injection. This release also adds `dsh.manifestVersion: 1` and `engines.dsh` to declare the supported range (current dsh does not enforce either).
 
 ## License
 
